@@ -7,7 +7,6 @@ import pymorphy2
 import nltk
 
 # Download the stopwords dataset (if not already downloaded)
-
 try:
     nltk.data.find('corpora/stopwords')
 except LookupError:
@@ -26,46 +25,67 @@ class Lemmatisator:
         self.stop_words = set(stopwords.words("russian"))
         self.tokenizer = WordPunctTokenizer()
         self.morph_analyzer = pymorphy2.MorphAnalyzer()
-        self.tokens = set()
-        self.lemmas = defaultdict(set)
 
     def run_lemmatization(self, text):
-        self.tokens.update(self.tokenizer.tokenize(text))
-        self.filter_tokens()
+        tokens = set(self.tokenizer.tokenize(text))
+        filtered_tokens = self.filter_tokens(tokens)
+        lemmas = self.build_lemmas(filtered_tokens)
+        return filtered_tokens, lemmas
 
-    def filter_tokens(self):
-        bad_tokens = set()
-        for token in self.tokens:
+    def filter_tokens(self, tokens):
+        good_tokens = set()
+        for token in tokens:
             morph = self.morph_analyzer.parse(token)
             if (
                     any([x for x in self.BAD_TOKENS_TAGS if x in morph[0].tag])
                     or token in self.stop_words
             ):
-                bad_tokens.add(token)
                 continue
             if morph[0].score >= 0.5:
-                self.lemmas[morph[0].normal_form].add(token)
-        self.tokens = self.tokens - bad_tokens
+                good_tokens.add(token)
+        return good_tokens
 
-    def write_tokens(self, path):
-        with open(path, "w", encoding="utf-8") as f:
-            f.write("\n".join(self.tokens))
+    def build_lemmas(self, tokens):
+        lemmas = defaultdict(set)
+        for token in tokens:
+            morph = self.morph_analyzer.parse(token)
+            lemma = morph[0].normal_form
+            lemmas[lemma].add(token)
+        return lemmas
 
-    def write_lemmas(self, path):
-        with open(path, "w", encoding="utf-8") as f:
-            for token, lemmas in self.lemmas.items():
-                f.write(f"{token} {' '.join(lemmas)}\n")
+
+def write_tokens(tokens, path):
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(tokens))
+
+
+def write_lemmas(lemmas, path):
+    with open(path, "w", encoding="utf-8") as f:
+        for lemma, tokens in lemmas.items():
+            f.write(f"{lemma} {' '.join(tokens)}\n")
 
 
 if __name__ == "__main__":
     lemmatisator = Lemmatisator()
-    pages_texts = []
     directory = 'downloaded_pages'
+    output_directory = 'output'
+
+    # Создаем директорию для вывода, если она не существует
+    os.makedirs(output_directory, exist_ok=True)
+
     for filename in os.listdir(directory):
         if filename.endswith(".html"):
             file_path = os.path.join(directory, filename)
-            pages_texts.append(get_text_from_html(file_path))
+            text = get_text_from_html(file_path)
 
-    lemmatisator.run_lemmatization(" ".join(pages_texts))
-    lemmatisator.write_tokens("tokens.txt")
-    lemmatisator.write_lemmas("lemmas.txt")
+            # Запускаем лемматизацию для текста текущей страницы
+            tokens, lemmas = lemmatisator.run_lemmatization(text)
+
+            # Формируем пути для сохранения результатов
+            base_name = os.path.splitext(filename)[0]
+            tokens_file = os.path.join(output_directory, f"{base_name}_tokens.txt")
+            lemmas_file = os.path.join(output_directory, f"{base_name}_lemmas.txt")
+
+            # Сохраняем токены и леммы в файлы
+            write_tokens(tokens, tokens_file)
+            write_lemmas(lemmas, lemmas_file)
