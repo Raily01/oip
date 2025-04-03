@@ -25,6 +25,9 @@ class Lemmatisator:
         self.stop_words = set(stopwords.words("russian"))
         self.tokenizer = WordPunctTokenizer()
         self.morph_analyzer = pymorphy2.MorphAnalyzer()
+        self.tokens = set()  # Для хранения токенов
+        self.lemmas = defaultdict(set)  # Для хранения лемм
+
 
     def run_lemmatization(self, text):
         tokens = set(self.tokenizer.tokenize(text))
@@ -43,6 +46,8 @@ class Lemmatisator:
                 continue
             if morph[0].score >= 0.5:
                 good_tokens.add(token)
+        self.tokens = good_tokens  # Сохраняем токены в атрибуте экземпляра
+
         return good_tokens
 
     def build_lemmas(self, tokens):
@@ -51,6 +56,7 @@ class Lemmatisator:
             morph = self.morph_analyzer.parse(token)
             lemma = morph[0].normal_form
             lemmas[lemma].add(token)
+            self.lemmas[lemma].add(token)  # Сохраняем леммы в атрибуте экземпляра
         return lemmas
 
 
