@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поисковая система</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .search-box {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 10px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .result-item {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .result-item:nth-child(odd) {
+            background-color: #f9f9f9;
+        }
+        .score {
+            color: #666;
+            font-size: 14px;
+        }
+        .error {
+            color: red;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Поисковая система</h1>
+    <form method="POST">
+        <div class="search-box">
+            <input type="text" name="query" placeholder="Введите поисковый запрос..." value="{{ query if query else '' }}" required>
+            <button type="submit">Найти</button>
+        </div>
+    </form>
+
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+
+    {% if results %}
+    <div class="results">
+        <h2>Результаты поиска (Топ-10):</h2>
+        {% for doc_id, score in results %}
+        <div class="result-item">
+            Документ #{{ doc_id }} 
+            <span class="score">(релевантность: {{ "%.4f"|format(score) }})</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</body>
+</html>
