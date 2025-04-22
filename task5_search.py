@@ -5,14 +5,13 @@ import re
 from collections import defaultdict
 from typing import Dict, List, Tuple
 
-# Константы
+
 LEMMAS_FILE = 'lemmas.txt'
 INVERTED_INDEX_FILE = 'inverted_index.txt'
 TFIDF_DIR = 'lemmas_tf_idf/'
 
 
 def load_lemmas() -> Dict[str, str]:
-    """Загружает словарь лемматизации"""
     lemmas = {}
     try:
         with open(LEMMAS_FILE, 'r', encoding='utf-8') as f:
@@ -21,7 +20,7 @@ def load_lemmas() -> Dict[str, str]:
                 if not parts:
                     continue
                 lemma = parts[0].rstrip(':')
-                for word in parts[1:]:  # Пропускаем первую часть (лемму с :)
+                for word in parts[1:]:
                     lemmas[word] = lemma
         return lemmas
     except FileNotFoundError:
@@ -44,7 +43,6 @@ def load_inverted_index() -> Dict[str, List[int]]:
 
 
 def load_tfidf_data() -> Tuple[Dict[str, Dict[str, float]], Dict[str, float]]:
-    """Загружает TF-IDF и вычисляет длины векторов документов"""
     doc_tfidf = defaultdict(dict)
     doc_lengths = {}
 
@@ -74,7 +72,6 @@ def load_tfidf_data() -> Tuple[Dict[str, Dict[str, float]], Dict[str, float]]:
 
 
 def process_query(query: str, lemmas: Dict[str, str]) -> List[str]:
-    """Обрабатывает поисковый запрос"""
     words = re.findall(r'\w+', query.lower())
     return [lemmas[word] for word in words if word in lemmas]
 
@@ -85,8 +82,6 @@ def search(
         doc_tfidf: Dict[str, Dict[str, float]],
         doc_lengths: Dict[str, float]
 ) -> List[Tuple[str, float]]:
-    """Выполняет поиск и ранжирование документов"""
-    # 1. Находим все релевантные документы
     relevant_docs = set()
     for lemma in query_lemmas:
         if lemma in index:
@@ -94,17 +89,14 @@ def search(
                 doc_name = f"page_{doc_id}.txt"
                 relevant_docs.add(doc_name)
 
-    # 2. Создаем вектор запроса (бинарный - 1 если термин есть в запросе)
     query_vector = {lemma: 1 for lemma in set(query_lemmas)}
     query_length = math.sqrt(len(query_vector))
 
-    # 3. Вычисляем релевантность для каждого документа
     results = []
     for doc_name in relevant_docs:
         if doc_name not in doc_tfidf:
             continue
 
-        # Скалярное произведение векторов запроса и документа
         dot_product = sum(
             query_vector.get(lemma, 0) * doc_tfidf[doc_name].get(lemma, 0)
             for lemma in query_vector
@@ -119,15 +111,12 @@ def search(
         doc_id = doc_name.replace('page_', '').replace('.txt', '')
         results.append((doc_id, cosine_similarity))
 
-    # Сортируем по убыванию релевантности
     return sorted(results, key=lambda x: x[1], reverse=True)
 
 
 def main():
-    """Основная функция поисковой системы"""
     print("Загрузка данных...")
 
-    # Загрузка данных
     lemmas = load_lemmas()
     index = load_inverted_index()
     doc_tfidf, doc_lengths = load_tfidf_data()
@@ -136,13 +125,11 @@ def main():
         print("Не удалось загрузить необходимые данные!")
         return
 
-    # Проверка данных
     print("\nПроверка данных:")
     print(f"Загружено лемм: {len(lemmas)}")
     print(f"Загружено терминов в индексе: {len(index)}")
     print(f"Загружено документов с TF-IDF: {len(doc_tfidf)}")
 
-    # Пример проверки конкретных терминов
     # test_terms = ["мама", "добрый", "кошка"]
     # for term in test_terms:
     #     lemma = lemmas.get(term, None)
@@ -164,16 +151,13 @@ def main():
         if not query:
             continue
 
-        # Обработка запроса
         query_lemmas = process_query(query, lemmas)
         if not query_lemmas:
             print("Не найдено подходящих лемм для запроса.", query_lemmas)
             continue
 
-        # Поиск и ранжирование
         results = search(query_lemmas, index, doc_tfidf, doc_lengths)
 
-        # Вывод результатов
         if not results:
             print("Ничего не найдено.")
         else:
